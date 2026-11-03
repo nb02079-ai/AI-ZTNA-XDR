@@ -1,0 +1,15 @@
+{
+  "name": "ai-ztna-xdr",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "AI 판정·설명과 ZTNA 접근 집행을 결합한 XDR. choi-bujang-vault 방어전 XDR의 후속으로, 채점 저장소와 분리된 별도 저장소에서 실제 AI에 연결합니다.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "run": "node scripts/run.mjs",
+    "test": "node --test test/"
+  },
+  "license": "UNLICENSED"
+}
