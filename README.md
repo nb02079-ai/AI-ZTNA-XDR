@@ -10,7 +10,7 @@ SKT Aleph 방어전 과제(`choi-bujang-vault`)의 보너스 XDR을 이어받아
 
 - [x] 스텝 1 — 뼈대, vault 자산 복사
 - [x] 스텝 2 — AI 계층(claude·local·mock 교체 가능, 기본 Sonnet 5.5)
-- [ ] 스텝 3 — AI 판정기(+규칙 폴백)
+- [x] 스텝 3 — AI 판정기(+규칙 폴백)
 - [ ] 스텝 4 — AI 설명 생성기
 - [ ] 스텝 5 — ZTNA 집행 매핑
 - [ ] 스텝 6 — 오프라인 검증
