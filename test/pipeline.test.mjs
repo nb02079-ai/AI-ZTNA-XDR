@@ -86,3 +86,18 @@ test('파이프라인: 결정적(같은 입력이면 같은 요약)', async () =
   const b = await runModule({ moduleKey: mk, provider: ruleOracle(mk, pats), root: ROOT });
   assert.deepEqual(a.summary, b.summary);
 });
+
+test('파이프라인: alerts를 직접 주입하면 fixture 대신 그 경보를 처리(보고서 경로)', async () => {
+  const mk = 'brute-force';
+  const pats = summarizePatterns(await loadPatterns(mk, ROOT)).items.map((p) => p.name);
+  const injected = [{
+    id: 'inj-01', timestamp: '2026-11-12T10:00:00+09:00', agent: { name: 'x' },
+    rule: { level: 12, description: '같은 주소에서 로그인 실패 40건이 쌓였습니다.' },
+    data: { srcip: '203.0.113.99', srcuser: 'u', count: '40' },
+  }];
+  const { summary, rows } = await runModule({ moduleKey: mk, provider: ruleOracle(mk, pats), root: ROOT, alerts: injected });
+  assert.equal(summary.total, 1);
+  assert.equal(rows[0].alertId, 'inj-01');
+  assert.equal(rows[0].decision.action, 'block');
+  assert.equal(rows[0].enforcement.access, 'enforce');
+});

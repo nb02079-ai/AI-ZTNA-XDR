@@ -48,9 +48,10 @@ export async function processAlert({ moduleKey, alert, provider, enforcer, confi
  * @param {object} [args.enforcerOpts]  createEnforcer 옵션(now·logFile 등)
  * @param {object} [args.config]
  * @param {string} [args.root]
+ * @param {Array} [args.alerts]  경보 배열을 직접 주입(없으면 fixture를 읽음). scenarios 점검에 쓴다.
  */
-export async function runModule({ moduleKey, provider, enforcerOpts = {}, config = {}, root }) {
-  const alerts = await loadFixture(moduleKey, root);
+export async function runModule({ moduleKey, provider, enforcerOpts = {}, config = {}, root, alerts: injected }) {
+  const alerts = injected ?? await loadFixture(moduleKey, root);
   // 경보 시각을 시계로 써서 만료·중복이 흐름대로 재현되게 한다(respond.mjs 원본 동작과 동일).
   const ordered = [...alerts].sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
 
