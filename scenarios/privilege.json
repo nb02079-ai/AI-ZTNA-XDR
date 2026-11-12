@@ -1,0 +1,40 @@
+{
+  "schema": "aleph.xdr.scenario.v1",
+  "moduleKey": "privilege",
+  "source": {
+    "incident": "LiteLLM 마스터키 노출 → 권한 있는 토큰 획득",
+    "date": "2026-05~10",
+    "summary": "5월에 노출된 마스터키가 10월에 권한 있는 GitHub 토큰 획득에 쓰여, 악성 PyPI·컨테이너 릴리스로 이어짐",
+    "note": "아래 경보는 노출 자격증명을 통한 권한 상승 국면을 계정 권한 신호로 각색한 합성 경보입니다. 계정명은 중립화했습니다."
+  },
+  "alerts": [
+    {
+      "id": "rc-pv-01",
+      "_expect": "block",
+      "_source": "LiteLLM — 노출 키로 권한 상승",
+      "_adaptation": "노출 마스터키로 얻은 권한을 '처음 보는 주소에서 서비스 계정이 관리자 그룹에 추가됨'으로 각색. 계정명·주소 중립화.",
+      "timestamp": "2026-11-09T15:40:22+09:00",
+      "agent": { "name": "ci-runner" },
+      "rule": {
+        "level": 12,
+        "description": "서비스 계정 svc_litellm 이 처음 보는 외부 주소에서 관리자 그룹에 추가됐습니다.",
+        "mitre": ["T1078"]
+      },
+      "data": { "srcip": "203.0.113.27", "srcuser": "svc_litellm", "group": "administrators" }
+    },
+    {
+      "id": "rc-pv-02",
+      "_expect": "record",
+      "_source": "대조군(수업 시간 정상 권한 사용)",
+      "_adaptation": "평소 주소에서 수업 시간 안에 관리자 명령이 한 번 실행됨 — 막으면 안 됨.",
+      "timestamp": "2026-11-09T15:47:03+09:00",
+      "agent": { "name": "ci-runner" },
+      "rule": {
+        "level": 3,
+        "description": "평소 주소에서 수업 시간 안에 관리자 명령이 한 번 실행됐습니다.",
+        "mitre": ["T1078"]
+      },
+      "data": { "srcip": "10.0.0.21", "srcuser": "user01", "group": "users" }
+    }
+  ]
+}

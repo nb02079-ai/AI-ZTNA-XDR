@@ -1,0 +1,40 @@
+{
+  "schema": "aleph.xdr.scenario.v1",
+  "moduleKey": "web-injection",
+  "source": {
+    "incident": "Convertr 분석 스크립트 변조(결제 스키밍)",
+    "date": "2026-10-27",
+    "summary": "변조된 분석 스크립트가 브라질 온라인 상점의 결제 카드 정보를 가로챔",
+    "note": "원 사건은 공급망 스크립트 변조(Magecart류)이며, 아래 경보는 웹 요청단의 스크립트 주입 신호로 각색한 합성 경보입니다."
+  },
+  "alerts": [
+    {
+      "id": "rc-wi-01",
+      "_expect": "block",
+      "_source": "Convertr 결제 스키밍 스크립트",
+      "_adaptation": "공급망 스크립트 변조를 결제 페이지에 반복된 스크립트 주입 요청으로 각색. 페이로드는 중립 문자열(doc-skim)로 표기.",
+      "timestamp": "2026-11-06T11:03:10+09:00",
+      "agent": { "name": "shop-frontend" },
+      "rule": {
+        "level": 12,
+        "description": "같은 주소에서 결제 페이지에 스크립트 태그를 끼워 넣은 요청이 9번 반복됐습니다.",
+        "mitre": ["T1190"]
+      },
+      "data": { "srcip": "203.0.113.22", "url": "/checkout?ref=<script>doc-skim</script>", "count": "9" }
+    },
+    {
+      "id": "rc-wi-02",
+      "_expect": "alert",
+      "_source": "경계군(한 번짜리 의심 요청)",
+      "_adaptation": "주입처럼 보이는 표기가 한 번만 있고 반복 기준(5건) 미만 — 막지 않고 사람이 확인.",
+      "timestamp": "2026-11-06T11:09:40+09:00",
+      "agent": { "name": "shop-frontend" },
+      "rule": {
+        "level": 7,
+        "description": "요청 인자에 따옴표가 한 번 섞여 있었지만 같은 주소에서 반복되지는 않았습니다.",
+        "mitre": ["T1190"]
+      },
+      "data": { "srcip": "203.0.113.23", "url": "/search?q=doc%27or", "count": "1" }
+    }
+  ]
+}

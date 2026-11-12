@@ -1,0 +1,44 @@
+{
+  "schema": "aleph.xdr.scenario.v1",
+  "moduleKey": "persistence",
+  "source": {
+    "incident": "레벨 인피니트/니케 PC 런처 공급망 침해",
+    "date": "2026-09~11",
+    "summary": "CDN의 정식 스크립트가 변조되어 원격 제어 에이전트가 설치되고, 크롬 사용자 폴더의 해시 이름 DLL과 레지스트리 CLSID로 지속성을 확보",
+    "note": "실제 IOC(도메인·CLSID·해시)는 중립화했습니다. 아래 경보는 그 지속성 국면을 호스트 신호로 각색한 합성 경보입니다."
+  },
+  "alerts": [
+    {
+      "id": "rc-ps-01",
+      "_expect": "block",
+      "_source": "니케 런처 — 크롬 폴더 DLL 지속성",
+      "_adaptation": "실제는 DLL+레지스트리 CLSID 자동 실행이나, 이 모듈이 보는 '새 서비스' 형태로 각색. 크롬 사용자 폴더의 해시 이름 폴더를 가리키는 서명 없는 실행 파일. 해시 폴더명은 <hash>, CLSID·도메인은 생략.",
+      "timestamp": "2026-11-08T14:05:12+09:00",
+      "agent": { "name": "nikke-pc" },
+      "rule": {
+        "level": 12,
+        "description": "평소 목록에 없는 새 서비스가 크롬 사용자 폴더의 해시 이름 폴더에 있는 서명 없는 실행 파일을 가리킵니다.",
+        "mitre": ["T1543"]
+      },
+      "data": {
+        "srcip": "203.0.113.26",
+        "srcuser": "user01",
+        "path": "C:\\Users\\user01\\AppData\\Local\\Google\\Chrome\\User Data\\PlatformExperienceHelper\\<hash>\\helper.dll"
+      }
+    },
+    {
+      "id": "rc-ps-02",
+      "_expect": "record",
+      "_source": "대조군(수업 도구 시작 항목)",
+      "_adaptation": "시작 폴더에 수업 도구 이름만 추가되고 이어 실행 기록이 없음 — 막으면 안 됨.",
+      "timestamp": "2026-11-08T14:12:40+09:00",
+      "agent": { "name": "nikke-pc" },
+      "rule": {
+        "level": 3,
+        "description": "시작 폴더에 수업 도구가 추가됐고 이어 실행된 기록은 없습니다.",
+        "mitre": ["T1543"]
+      },
+      "data": { "srcip": "10.0.0.20", "srcuser": "user01", "path": "C:\\Users\\user01\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\class-tool.lnk" }
+    }
+  ]
+}
