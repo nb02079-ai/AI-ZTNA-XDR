@@ -13,7 +13,7 @@ SKT Aleph 방어전 과제(`choi-bujang-vault`)의 보너스 XDR을 이어받아
 - [x] 스텝 3 — AI 판정기(+규칙 폴백)
 - [x] 스텝 4 — AI 설명 생성기(근거 대조·오설명 거부)
 - [x] 스텝 5 — ZTNA 집행 매핑(거부/격리/세션 거둠/목적지 차단)
-- [ ] 스텝 6 — 오프라인 검증
+- [x] 스텝 6 — 오프라인 검증(실행기 + 전과정 통합 시험)
 - [ ] 스텝 7 — 실제 호출 검증 가이드
 - [ ] 스텝 8 — 공개 저장소 반영
 
@@ -36,6 +36,25 @@ docs/           구조·검증 문서
 
 - Node.js 22 이상
 - AI 호출에는 API 키가 필요합니다. `.env.example`을 `.env`로 복사해 채웁니다. `.env`는 저장소에 올리지 않습니다.
+
+## 실행
+
+```
+# 키 없이 흐름만 확인(모의 제공자)
+AI_PROVIDER=mock node scripts/run.mjs known-cve --rows
+
+# 실제 AI로 한 모듈(키를 .env에 넣은 뒤)
+node --env-file=.env scripts/run.mjs known-cve
+
+# 여섯 모듈 전체
+node --env-file=.env scripts/run.mjs all
+
+# 시험(네트워크 없이)
+npm test
+```
+
+모듈: `brute-force` `web-injection` `known-cve` `persistence` `privilege` `exfiltration` `all`
+옵션: `--rows`(경보별 흐름), `--json`(기계 판독용)
 
 ## 자료 주의
 
