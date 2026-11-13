@@ -13,8 +13,14 @@ test('loadConfig: claude 기본값', () => {
   const c = loadConfig({ AI_PROVIDER: 'claude' });
   assert.equal(c.provider, 'claude');
   assert.equal(c.model, 'claude-sonnet-5-5');
-  assert.equal(c.temperature, 0);
+  assert.equal(c.temperature, undefined); // 미설정이면 undefined(요청에 안 넣음)
   assert.equal(c.maxTokens, 1024);
+});
+
+test('loadConfig: AI_TEMPERATURE가 있으면 숫자로 읽는다', () => {
+  assert.equal(loadConfig({ AI_PROVIDER: 'claude', AI_TEMPERATURE: '0.7' }).temperature, 0.7);
+  assert.equal(loadConfig({ AI_PROVIDER: 'claude', AI_TEMPERATURE: '0' }).temperature, 0);
+  assert.equal(loadConfig({ AI_PROVIDER: 'claude', AI_TEMPERATURE: '' }).temperature, undefined);
 });
 
 test('loadConfig: AI_MODEL이 제공자 기본값을 덮어씀', () => {
@@ -94,7 +100,25 @@ test('claude 제공자: 요청을 올바르게 구성', async () => {
   assert.equal(body.system, 'sys');
   assert.equal(body.max_tokens, 256);
   assert.equal(body.messages[0].content, 'u');
+  assert.equal(body.temperature, 0); // 명시한 0은 포함된다
   assert.equal(extractJson(out.text).action, 'alert');
+});
+
+test('claude 제공자: temperature 미설정이면 body에 넣지 않는다(Sonnet 5.5 호환)', async () => {
+  let captured;
+  const fakeFetch = async (url, opts) => {
+    captured = { url, opts };
+    return {
+      ok: true, status: 200,
+      async json() { return { content: [{ type: 'text', text: '{"action":"record","confidence":0,"reason":"r"}' }] }; },
+      async text() { return ''; },
+    };
+  };
+  // config에 temperature를 주지 않음(undefined)
+  const p = createClaudeProvider({ model: 'claude-sonnet-5-5', apiKey: 'sk-test', fetchImpl: fakeFetch });
+  await p.generate({ user: 'u' });
+  const body = JSON.parse(captured.opts.body);
+  assert.equal('temperature' in body, false, 'temperature 키가 없어야 함');
 });
 
 test('claude 제공자: 비200 응답은 http 오류', async () => {
@@ -115,14 +139,28 @@ test('local 제공자: Ollama 요청 구성', async () => {
       async text() { return ''; },
     };
   };
-  const p = createLocalProvider({ model: 'qwen2.5:7b', baseUrl: 'http://127.0.0.1:11434/', fetchImpl: fakeFetch });
+  const p = createLocalProvider({ model: 'qwen2.5:7b', baseUrl: 'http://127.0.0.1:11434/', fetchImpl: fakeFetch, temperature: 0.2 });
   const out = await p.generate({ user: 'u', responseFormat: 'json' });
   assert.ok(captured.url.endsWith('/api/chat'));
   const body = JSON.parse(captured.opts.body);
   assert.equal(body.model, 'qwen2.5:7b');
   assert.equal(body.format, 'json');
   assert.equal(body.stream, false);
+  assert.equal(body.options.temperature, 0.2); // 명시하면 들어간다
+  assert.equal(body.options.num_predict, 1024);
   assert.equal(extractJson(out.text).action, 'record');
+});
+
+test('local 제공자: temperature 미설정이면 options에 넣지 않는다', async () => {
+  let captured;
+  const fakeFetch = async (url, opts) => {
+    captured = { url, opts };
+    return { ok: true, status: 200, async json() { return { message: { content: '{"action":"record","confidence":0,"reason":"r"}' } }; }, async text() { return ''; } };
+  };
+  const p = createLocalProvider({ model: 'qwen2.5:7b', fetchImpl: fakeFetch });
+  await p.generate({ user: 'u' });
+  const body = JSON.parse(captured.opts.body);
+  assert.equal('temperature' in body.options, false);
 });
 
 test('local 제공자: 네트워크 실패는 network 오류', async () => {

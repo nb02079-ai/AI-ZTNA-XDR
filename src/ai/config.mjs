@@ -11,6 +11,14 @@ function intOr(value, fallback) {
   return Math.trunc(numberOr(value, fallback));
 }
 
+// AI_TEMPERATURE가 실제로 설정된 경우에만 숫자로 돌려주고, 비어 있으면 undefined.
+// 일부 최신 모델(예: Claude Sonnet 5.5)은 temperature를 받지 않으므로, 명시하지 않으면 보내지 않는다.
+function optionalNumber(value) {
+  if (value === undefined || value === null || String(value).trim() === '') return undefined;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : undefined;
+}
+
 /**
  * @param {Record<string,string|undefined>} [env]
  */
@@ -18,7 +26,7 @@ export function loadConfig(env = process.env) {
   const provider = (env.AI_PROVIDER || 'claude').trim().toLowerCase();
   const common = {
     provider,
-    temperature: numberOr(env.AI_TEMPERATURE, 0),
+    temperature: optionalNumber(env.AI_TEMPERATURE), // 미설정이면 undefined → 요청에 넣지 않음
     maxTokens: intOr(env.AI_MAX_TOKENS, 1024),
     timeoutMs: intOr(env.AI_TIMEOUT_MS, 30000),
   };

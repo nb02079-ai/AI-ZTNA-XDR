@@ -27,10 +27,12 @@ export function createLocalProvider(config) {
         messages,
         stream: false,
         options: {
-          temperature: req.temperature ?? config.temperature ?? 0,
           num_predict: req.maxTokens ?? config.maxTokens ?? 1024,
         },
       };
+      // temperature는 명시된 경우에만 전달(없으면 모델 기본값).
+      const temperature = req.temperature ?? config.temperature;
+      if (temperature !== undefined && temperature !== null) body.options.temperature = temperature;
       if (req.responseFormat === 'json') body.format = 'json';
 
       const res = await fetchWithTimeout(

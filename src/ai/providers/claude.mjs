@@ -30,9 +30,11 @@ export function createClaudeProvider(config) {
       const body = {
         model,
         max_tokens: req.maxTokens ?? config.maxTokens ?? 1024,
-        temperature: req.temperature ?? config.temperature ?? 0,
         messages,
       };
+      // temperature는 명시된 경우에만 보낸다. Sonnet 5.5 등 일부 모델은 이 파라미터를 거부한다(HTTP 400).
+      const temperature = req.temperature ?? config.temperature;
+      if (temperature !== undefined && temperature !== null) body.temperature = temperature;
       if (req.system) body.system = String(req.system);
 
       const res = await fetchWithTimeout(
