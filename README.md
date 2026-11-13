@@ -56,6 +56,9 @@ node --env-file=.env scripts/run.mjs all
 # 시험(네트워크 없이)
 npm test
 
+# AI 연결 점검(안 될 때 원인을 바로 보여줌)
+node --env-file=.env scripts/check-ai.mjs
+
 # 실사례 각색 경보로 탐지 점검 보고서 데이터 뽑기(결과 out/report-<제공자>.json)
 node --env-file=.env scripts/report-run.mjs
 ```

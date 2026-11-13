@@ -49,7 +49,7 @@ async function main() {
     provider: config.provider,
     model: config.model,
     modules: [],
-    totals: { hit: 0, miss: 0, clean: 0, false_positive: 0, partial: 0, other: 0 },
+    totals: { hit: 0, miss: 0, clean: 0, false_positive: 0, partial: 0, other: 0, aiUsed: 0, aiFallback: 0 },
   };
 
   for (const moduleKey of MODULE_KEYS) {
@@ -61,12 +61,16 @@ async function main() {
       const expect = expectById.get(row.alertId) ?? 'record';
       const verdict = classify(expect, row.decision.action);
       report.totals[verdict] += 1;
+      if (row.decision.source === 'rule') report.totals.aiFallback += 1;
+      else report.totals.aiUsed += 1;
       return {
         alertId: row.alertId,
         expect,
         action: row.decision.action,
         confidence: row.decision.confidence,
         source: row.decision.source,          // ai | rule(폴백)
+        fallbackKind: row.decision.fallback ? row.decision.fallback.kind : null,     // 폴백이면 그 사유
+        fallbackMessage: row.decision.fallback ? row.decision.fallback.message : null,
         verdict,                               // hit | miss | clean | false_positive | partial
         access: row.enforcement.access,        // enforce | review | allow
         enforceKind: row.enforcement.kind,
@@ -88,10 +92,21 @@ async function main() {
   // 콘솔 요약
   process.stdout.write(`제공자 ${report.provider} / 모델 ${report.model}\n`);
   process.stdout.write(`집계: 잡음(hit) ${report.totals.hit}, 놓침(miss) ${report.totals.miss}, 정상통과(clean) ${report.totals.clean}, 오탐(fp) ${report.totals.false_positive}, 부분 ${report.totals.partial}\n`);
+  process.stdout.write(`판정출처: 실제 AI ${report.totals.aiUsed}, 규칙 폴백 ${report.totals.aiFallback}\n`);
+  if (report.totals.aiFallback > 0) {
+    // 폴백 사유 분포를 모아 보여준다 — "왜 AI가 안 쓰였는지"가 한눈에 보이게.
+    const kinds = {};
+    for (const m of report.modules) for (const it of m.items) {
+      if (it.source === 'rule' && it.fallbackKind) kinds[it.fallbackKind] = (kinds[it.fallbackKind] ?? 0) + 1;
+    }
+    const detail = Object.entries(kinds).map(([k, v]) => `${k} ${v}`).join(', ');
+    process.stdout.write(`폴백 사유: ${detail || '(미상)'} — 연결 점검은 scripts/check-ai.mjs 로 확인하세요.\n`);
+  }
   for (const m of report.modules) {
     for (const it of m.items) {
       const ex = it.explained ? '설명O' : (it.explanationCode ? `설명X(${it.explanationCode})` : '설명-');
-      process.stdout.write(`  ${m.module.padEnd(14)} ${it.alertId.padEnd(9)} 기대 ${it.expect.padEnd(6)} → ${it.action.padEnd(6)} [${it.verdict}] ${it.source} ${it.access} ${ex}\n`);
+      const fb = it.source === 'rule' && it.fallbackKind ? ` 폴백(${it.fallbackKind})` : '';
+      process.stdout.write(`  ${m.module.padEnd(14)} ${it.alertId.padEnd(9)} 기대 ${it.expect.padEnd(6)} → ${it.action.padEnd(6)} [${it.verdict}] ${it.source}${fb} ${it.access} ${ex}\n`);
     }
   }
   process.stdout.write(`\n저장: ${outFile}\n`);

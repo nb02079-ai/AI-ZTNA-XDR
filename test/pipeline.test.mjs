@@ -87,6 +87,23 @@ test('파이프라인: 결정적(같은 입력이면 같은 요약)', async () =
   assert.deepEqual(a.summary, b.summary);
 });
 
+test('파이프라인: AI 호출 실패 시 각 행에 폴백 사유가 담긴다(진단용)', async () => {
+  const mk = 'brute-force';
+  const provider = { name: 'boom', async generate() {
+    const { AiError } = await import('../src/ai/errors.mjs');
+    throw new AiError('키 없음', { kind: 'config' });
+  } };
+  const injected = [{
+    id: 'inj-fb', timestamp: '2026-11-13T10:00:00+09:00', agent: { name: 'x' },
+    rule: { level: 12, description: '같은 주소에서 로그인 실패 40건이 쌓였습니다.' },
+    data: { srcip: '203.0.113.99', srcuser: 'u', count: '40' },
+  }];
+  const { rows } = await runModule({ moduleKey: mk, provider, root: ROOT, alerts: injected });
+  assert.equal(rows[0].decision.source, 'rule');
+  assert.ok(rows[0].decision.fallback, '폴백 사유 객체 존재');
+  assert.equal(rows[0].decision.fallback.kind, 'config');
+});
+
 test('파이프라인: alerts를 직접 주입하면 fixture 대신 그 경보를 처리(보고서 경로)', async () => {
   const mk = 'brute-force';
   const pats = summarizePatterns(await loadPatterns(mk, ROOT)).items.map((p) => p.name);

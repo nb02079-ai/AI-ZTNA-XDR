@@ -22,12 +22,13 @@ cd AI-ZTNA-XDR
 
 ## 2. 먼저 키 없이 동작 확인(mock)
 
-키를 넣기 전에, 파이프라인이 도는지부터 봅니다. 외부 호출·키가 필요 없습니다.
+키를 넣기 전에, 파이프라인이 도는지부터 봅니다. 외부 호출·키가 필요 없습니다. **환경변수를 세션에 남기지 않도록 한 줄에서 설정→실행→해제합니다.**
 
 ```powershell
-$env:AI_PROVIDER = "mock"
-node scripts/run.mjs known-cve --rows
+$env:AI_PROVIDER="mock"; node scripts/run.mjs known-cve --rows; Remove-Item Env:\AI_PROVIDER
 ```
+
+> **주의:** `$env:AI_PROVIDER = "mock"`을 따로 설정해 두면 그 PowerShell 창에 계속 남습니다. Node의 `--env-file`은 **이미 있는 환경변수를 덮어쓰지 않으므로**, 뒤에서 `.env`로 `claude`를 지정해도 세션에 남은 `mock`이 이깁니다(실행 결과에 "제공자: mock"으로 나타남). 위처럼 끝에 `Remove-Item Env:\AI_PROVIDER`로 지우거나, 새 PowerShell 창에서 다음 단계를 진행하세요.
 
 모듈 경보가 판정 → 집행까지 흐르는 요약이 나오면 정상입니다. 시험도 돌려볼 수 있습니다(네트워크 없이):
 
@@ -80,6 +81,17 @@ node --env-file=.env scripts/run.mjs all
 
 각 경보가 실제 Sonnet 판정(`ai`)으로 처리되고, 판정·설명·접근 결정이 함께 나옵니다. AI 호출이 실패하면 자동으로 규칙 판정(`rule`)으로 떨어지므로 멈추지 않습니다.
 
+### 3-4. 연결이 안 되면 — 먼저 점검
+
+판정출처가 전부 `rule`이고 설명이 `ai_unavailable`로 나오면, AI 호출이 실패해 규칙 폴백으로 떨어진 것입니다. 파이프라인은 실패를 조용히 삼키므로, **원인은 점검기로 확인**합니다.
+
+```powershell
+node --env-file=.env scripts/check-ai.mjs
+```
+
+- 성공하면 `✓ 성공`과 응답이 나옵니다. 그대로 실제 실행을 진행하면 됩니다.
+- 실패하면 `✗ 실패`와 함께 **정확한 원인**(키 미설정 · 401 인증 · 403 권한/크레딧 · 404 모델명 · 네트워크 · 시간 초과)과 조치를 알려 줍니다. 그 안내대로 고친 뒤 다시 실행하세요.
+
 ## 4. 탐지 점검 보고서 데이터 뽑기
 
 각색 경보(`scenarios/`)를 실제 Sonnet으로 돌려, 보고서에 채울 결과 JSON을 만듭니다.
@@ -130,11 +142,15 @@ node --env-file=.env scripts/run.mjs all
 
 | 증상 | 원인·조치 |
 |---|---|
+| **제공자가 `mock`으로 고정됨** | 세션에 남은 `$env:AI_PROVIDER`가 `.env`를 이깁니다. `Remove-Item Env:\AI_PROVIDER` 후 다시 실행하거나 새 창을 엽니다. |
+| **판정이 전부 `rule`/`ai_unavailable`** | AI 호출 실패가 폴백된 것입니다. `node --env-file=.env scripts/check-ai.mjs`로 정확한 원인을 봅니다. |
 | `AI_PROVIDER` 오류 | `claude` / `local` / `mock` 중 하나여야 합니다. |
 | `ANTHROPIC_API_KEY가 설정되지 않았습니다` | `.env`에 키를 넣고 `--env-file=.env`로 실행했는지 확인합니다. |
-| `Claude API 오류 401` | 키가 틀렸거나 만료됐습니다. 콘솔에서 새 키를 발급합니다. |
-| `Claude API 오류 429` | 요청이 너무 잦습니다. 잠시 뒤 다시 돌립니다. |
-| `요청 시간 초과` | 네트워크가 느립니다. `.env`의 `AI_TIMEOUT_MS`를 늘립니다(예: 60000). |
+| 401 인증 오류 | 키가 틀렸거나 비활성입니다. 콘솔에서 새 키를 발급합니다. |
+| 403 권한 없음 | 크레딧 잔액이나 조직 권한을 확인합니다. |
+| 404 모델 없음 | `CLAUDE_MODEL`이 맞는지 확인합니다(`claude-sonnet-5-5`). |
+| 429 요청 과다 | 요청이 너무 잦습니다. 잠시 뒤 다시 돌립니다. |
+| `요청 시간 초과` | 네트워크가 느리거나 막혔습니다. `.env`의 `AI_TIMEOUT_MS`를 늘립니다(예: 60000). |
 | 로컬 모델 `네트워크 요청 실패` | Ollama가 켜져 있는지, `LOCAL_AI_URL`이 맞는지 확인합니다. |
 | `--env-file` 인식 안 됨 | Node 20.6 미만입니다. 22 이상으로 올립니다. |
 

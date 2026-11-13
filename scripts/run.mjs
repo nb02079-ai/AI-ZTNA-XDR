@@ -65,7 +65,10 @@ async function main() {
     if (args.rows) {
       for (const row of rows) {
         const ex = row.explanation ? (row.explanation.ok ? '설명O' : `설명X(${row.explanation.code})`) : '설명-';
-        process.stdout.write(`    ${row.alertId}: ${row.decision.action}/${row.decision.source} → ${row.enforcement.access} [${ex}]\n`);
+        const src = row.decision.source === 'rule' && row.decision.fallback
+          ? `rule(폴백:${row.decision.fallback.kind})`
+          : row.decision.source;
+        process.stdout.write(`    ${row.alertId}: ${row.decision.action}/${src} → ${row.enforcement.access} [${ex}]\n`);
       }
     }
     process.stdout.write('\n');
