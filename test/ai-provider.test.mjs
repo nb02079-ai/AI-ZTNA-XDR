@@ -127,6 +127,33 @@ test('claude 제공자: 비200 응답은 http 오류', async () => {
   await assert.rejects(() => p.generate({ user: 'x' }), (e) => e instanceof AiError && e.kind === 'http' && e.status === 429 && e.aiFailure === true);
 });
 
+test('claude 제공자: temperature 거부 400이면 빼고 1회 재시도해 성공', async () => {
+  const bodies = [];
+  const fakeFetch = async (url, opts) => {
+    bodies.push(JSON.parse(opts.body));
+    if (bodies.length === 1) {
+      // 첫 요청: temperature 포함 → 400 거부
+      return { ok: false, status: 400, async text() { return '{"error":{"message":"`temperature` is deprecated for this model."}}'; }, async json() { return {}; } };
+    }
+    // 재시도: temperature 없음 → 성공
+    return { ok: true, status: 200, async json() { return { content: [{ type: 'text', text: '{"action":"record","confidence":0,"reason":"r"}' }] }; }, async text() { return ''; } };
+  };
+  const p = createClaudeProvider({ model: 'claude-sonnet-5-5', apiKey: 'k', fetchImpl: fakeFetch, temperature: 0 });
+  const out = await p.generate({ user: 'u' });
+  assert.equal(bodies.length, 2, '두 번 호출(원요청 + 재시도)');
+  assert.equal('temperature' in bodies[0], true, '첫 요청엔 temperature 있음');
+  assert.equal('temperature' in bodies[1], false, '재시도엔 temperature 없음');
+  assert.equal(extractJson(out.text).action, 'record');
+});
+
+test('claude 제공자: temperature 없는 다른 400은 재시도하지 않고 바로 오류', async () => {
+  let calls = 0;
+  const fakeFetch = async () => { calls += 1; return { ok: false, status: 400, async text() { return '{"error":{"message":"messages: at least one message is required"}}'; }, async json() { return {}; } }; };
+  const p = createClaudeProvider({ model: 'm', apiKey: 'k', fetchImpl: fakeFetch, temperature: 0 });
+  await assert.rejects(() => p.generate({ user: 'x' }), (e) => e instanceof AiError && e.status === 400);
+  assert.equal(calls, 1, '재시도 없이 한 번만');
+});
+
 // --- local 제공자(가짜 fetch) ---
 test('local 제공자: Ollama 요청 구성', async () => {
   let captured;

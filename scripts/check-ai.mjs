@@ -80,7 +80,7 @@ function provider_generate(config) {
     user: '{"ok":true} 만 출력하라.',
     responseFormat: 'json',
     maxTokens: 64,
-    temperature: 0,
+    temperature: config.temperature, // config에 명시됐을 때만 전송(undefined면 안 보냄)
   });
 }
 

@@ -45,7 +45,7 @@ export async function decideAlert({ moduleKey, alert, provider, config = {}, roo
       user,
       responseFormat: 'json',
       maxTokens: config.maxTokens ?? 512,
-      temperature: config.temperature ?? 0,
+      temperature: config.temperature, // undefined면 제공자가 요청에 넣지 않음(Sonnet 5.5 호환)
       timeoutMs: config.timeoutMs,
     });
     const parsed = extractJson(res.text);

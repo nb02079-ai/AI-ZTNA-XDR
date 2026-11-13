@@ -142,6 +142,7 @@ node --env-file=.env scripts/run.mjs all
 
 | 증상 | 원인·조치 |
 |---|---|
+| `temperature is deprecated` (400) | Sonnet 5.5는 temperature를 거부합니다. 코드가 자동으로 빼고 재시도하므로 최신 코드(`git pull`)면 넘어갑니다. 그래도 나면 `.env`의 `AI_TEMPERATURE` 줄을 비우세요. |
 | **제공자가 `mock`으로 고정됨** | 세션에 남은 `$env:AI_PROVIDER`가 `.env`를 이깁니다. `Remove-Item Env:\AI_PROVIDER` 후 다시 실행하거나 새 창을 엽니다. |
 | **판정이 전부 `rule`/`ai_unavailable`** | AI 호출 실패가 폴백된 것입니다. `node --env-file=.env scripts/check-ai.mjs`로 정확한 원인을 봅니다. |
 | `AI_PROVIDER` 오류 | `claude` / `local` / `mock` 중 하나여야 합니다. |

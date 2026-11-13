@@ -37,33 +37,50 @@ export function createClaudeProvider(config) {
       if (temperature !== undefined && temperature !== null) body.temperature = temperature;
       if (req.system) body.system = String(req.system);
 
-      const res = await fetchWithTimeout(
-        apiUrl,
-        {
-          method: 'POST',
-          headers: {
-            'content-type': 'application/json',
-            'x-api-key': apiKey,
-            'anthropic-version': anthropicVersion,
-          },
-          body: JSON.stringify(body),
-        },
-        req.timeoutMs ?? config.timeoutMs ?? 30000,
-        fetchImpl,
-      );
+      const timeoutMs = req.timeoutMs ?? config.timeoutMs ?? 30000;
 
-      if (!res.ok) {
+      // 한 번 보내고, 응답을 돌려준다(비200이면 상태·본문을 함께).
+      const send = async (payload) => {
+        const r = await fetchWithTimeout(
+          apiUrl,
+          {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+              'x-api-key': apiKey,
+              'anthropic-version': anthropicVersion,
+            },
+            body: JSON.stringify(payload),
+          },
+          timeoutMs,
+          fetchImpl,
+        );
+        if (r.ok) return { ok: true, res: r };
         let detail = '';
-        try { detail = await res.text(); } catch { /* 본문 없음 */ }
-        throw new AiError(`Claude API 오류 ${res.status}`, {
+        try { detail = await r.text(); } catch { /* 본문 없음 */ }
+        return { ok: false, status: r.status, detail };
+      };
+
+      let out = await send(body);
+
+      // 보강: 모델이 temperature(또는 다른 파라미터)를 거부하는 400이면, 그 파라미터를 빼고 1회 재시도한다.
+      // .env에 temperature가 남아 있거나 호출부가 값을 넘겨도 이 오류로는 멈추지 않게 한다.
+      if (!out.ok && out.status === 400 && 'temperature' in body && /temperature/i.test(out.detail) && /(deprecat|not supported|unsupported|unexpected)/i.test(out.detail)) {
+        const retryBody = { ...body };
+        delete retryBody.temperature;
+        out = await send(retryBody);
+      }
+
+      if (!out.ok) {
+        throw new AiError(`Claude API 오류 ${out.status}`, {
           kind: 'http',
-          status: res.status,
+          status: out.status,
           provider: 'claude',
-          cause: detail ? new Error(detail.slice(0, 500)) : undefined,
+          cause: out.detail ? new Error(out.detail.slice(0, 500)) : undefined,
         });
       }
 
-      const data = await res.json();
+      const data = await out.res.json();
       const text = Array.isArray(data?.content)
         ? data.content.filter((b) => b && b.type === 'text').map((b) => b.text).join('')
         : '';
